@@ -18,37 +18,49 @@ class Calculator {
     
     appendNumber(number) {
       if ((number === '.') && (this.currentOperand.includes('.'))) return;  
+      if (this.previousOperand === '' && this.currentOperand !== '' && this.readyToReset) {
+        this.currentOperand = '';
+        this.readyToReset = false;
+      }
       this.currentOperand = this.currentOperand.toString() + number.toString();
     }
 
     chooseOperation (operation) {
       if (this.currentOperand === '') return;
-      if (this.previousOperand !== '') {
+      if ((this.previousOperand !== '') || (this.operation === '√')) {
         this.compute();
       }
       this.operation = operation;
-      this.previousOperand = this.currentOperand;
-      this.currentOperand = '';
+      if (this.operation !== '√') {
+        this.previousOperand = this.currentOperand;
+        this.currentOperand = '';
+      }  
     }
 
     compute() {
       let computation;
       const prev = parseFloat(this.previousOperand);
       const current = parseFloat(this.currentOperand); 
-      if (isNaN(prev) || isNaN(current)) return;
+      if (isNaN(current) || (isNaN(prev) && (this.operation != '√'))) return;
       switch (this.operation) {
         case '+':
           computation = prev + current;
-          break
+        break;
         case '-':
           computation = prev - current;
-          break
+        break;
         case '*':
           computation = prev * current;
-        break
-          case '÷':
+        break;
+        case '÷':
           computation = prev / current;
-        break
+        break;
+        case '^':
+          computation = Math.pow(prev, current); 
+        break;
+        case '√':
+          computation = Math.sqrt(current); 
+        break;
         default:
           return;
       }
@@ -76,11 +88,15 @@ class Calculator {
     }
 
     updateDisplay() {
-      this.currentOperandTextElement.innerText = this.getDisplayNumber(this.currentOperand);
-      if (this.operation != null) {
+      if (this.operation != '√')  {
+        this.currentOperandTextElement.innerText = this.getDisplayNumber(this.currentOperand);
+      } else {
+        this.currentOperandTextElement.innerText = `${this.operation} ${this.getDisplayNumber(this.currentOperand)}`;
+      }
+      if (this.operation != null && this.operation != '√') {
         this.previousOperandTextElement.innerText = `${this.getDisplayNumber(this.previousOperand)} ${this.operation}`;
       } else {
-        this.previousOperandTextElement.innerText = this.getDisplayNumber(this.previousOperand);   
+        this.previousOperandTextElement.innerText = '';   
       }
     }
 }
@@ -97,10 +113,6 @@ const calculator = new Calculator(previousOperandTextElement, currentOperandText
 
 numberButtons.forEach (button => {
   button.addEventListener('click', () => {
-    if (calculator.previousOperand === '' && calculator.currentOperand !== '' && calculator.readyToReset) {
-        calculator.currentOperand = '';
-        calculator.readyToReset = false;
-    }
     calculator.appendNumber(button.innerText);
     calculator.updateDisplay();
   });
