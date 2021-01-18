@@ -10,14 +10,17 @@ class Calculator {
       this.previousOperand = '';
       this.operation = undefined;
       this.readyToReset = false;
+      this.errorOperand = false;
     }
     
     delete() {
+      if (this.currentOperand === '') return;
       this.currentOperand = this.currentOperand.toString().slice(0, -1);
     }
     
     appendNumber(number) {
-      if ((number === '.') && (this.currentOperand.includes('.'))) return;  
+      if (this.errorOperand) return;
+      if ((number === '.') && (this.currentOperand.includes('.'))) return; 
       if (this.previousOperand === '' && this.currentOperand !== '' && this.readyToReset) {
         this.currentOperand = '';
         this.readyToReset = false;
@@ -26,12 +29,18 @@ class Calculator {
     }
 
     chooseOperation (operation) {
-      if (this.currentOperand === '') return;
+      if (this.errorOperand) return;
+      if (this.currentOperand === '' && operation !== '-') return;
+      if (this.currentOperand === '' && operation === '-') {
+        this.currentOperand = '-'; 
+        return; 
+      }
+      if (this.currentOperand === '-' || this.currentOperand === '.'|| this.currentOperand === '-.') return; 
       if ((this.previousOperand !== '') || (this.operation === '√')) {
         this.compute();
       }
       this.operation = operation;
-      if (this.operation !== '√') {
+      if (this.operation !== '√' && !this.errorOperand) {
         this.previousOperand = this.currentOperand;
         this.currentOperand = '';
       }  
@@ -39,9 +48,9 @@ class Calculator {
 
     compute() {
       let computation;
-      const prev = parseFloat(this.previousOperand);
-      const current = parseFloat(this.currentOperand); 
-      if (isNaN(current) || (isNaN(prev) && (this.operation != '√'))) return;
+      let prev = parseFloat(this.previousOperand);
+      let current = parseFloat(this.currentOperand); 
+       if (isNaN(current) || (isNaN(prev) && (this.operation != '√'))) return;
       switch (this.operation) {
         case '+':
           computation = prev + current;
@@ -53,41 +62,57 @@ class Calculator {
           computation = prev * current;
         break;
         case '÷':
-          computation = prev / current;
+          if (current === 0) {
+            this.errorOperand = true;
+          } else {
+            computation = prev / current;
+          }
         break;
         case '^':
           computation = Math.pow(prev, current); 
         break;
         case '√':
-          computation = Math.sqrt(current); 
+          if (current >= 0) {
+            computation = Math.sqrt(current);
+          } else {
+            this.errorOperand = true;
+          }
         break;
         default:
           return;
       }
       this.readyToReset = true;
-      this.currentOperand = computation;
+      this.currentOperand = +computation.toFixed(16);
       this.operation = undefined;
       this.previousOperand = '';
     }
 
     getDisplayNumber(number) {
-      const stringNumber = number.toString();
-      const integerDigits = parseFloat(stringNumber.split('.')[0]);
-      const decimalDigits = stringNumber.split('.')[1];
       let integerDisplay;
-      if (isNaN(integerDigits)) {
+      const stringNumber = number.toString();
+      const integerDigits = parseInt(stringNumber.split('.')[0]);
+      const decimalDigits = stringNumber.split('.')[1];
+      if (isNaN(integerDigits) && stringNumber !== '-') {
         integerDisplay = '';
-      } else {
-        integerDisplay = integerDigits.toLocaleString('ru');
-      }
-      if (decimalDigits != null) {
+      } else if (stringNumber === '-') {
+          integerDisplay = '-';
+        } else {
+            integerDisplay = integerDigits.toLocaleString('ru');
+          }
+      if (decimalDigits != null && !stringNumber.includes('-.')) {
         return `${integerDisplay}.${decimalDigits}`;
-      } else {
-        return integerDisplay;
-      }
+      } else if (stringNumber.includes('-.')) {
+          return `-.${decimalDigits}`;
+        } else {
+          return integerDisplay;
+        }
     }
 
     updateDisplay() {
+      if (this.errorOperand) {
+        this.currentOperandTextElement.innerText = 'Error';
+        this.previousOperandTextElement.innerText = '';   
+      }
       if (this.operation != '√')  {
         this.currentOperandTextElement.innerText = this.getDisplayNumber(this.currentOperand);
       } else {
